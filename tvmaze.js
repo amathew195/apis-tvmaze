@@ -3,7 +3,8 @@
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
-
+const IMG_PLACEHOLDER = "https://tinyurl.com/tv-missing"
+//TO DO Move up base_URL
 
 /** Given a search term, search for tv shows that match that query.
  *
@@ -13,11 +14,22 @@ const $searchForm = $("#searchForm");
  */
 
 async function getShowsByTerm(term) {
-  // ADD: Remove placeholder & make request to TVMaze search shows API.
-  // const $searchTerm = $("#searchForm-term").val();
 
   const response = await axios.get("http://api.tvmaze.com/search/shows", { params: { q: term } });
-  const shows = response.data;
+
+  let image;
+
+  const shows = response.data.map( show => {
+    const {summary, id, name} = show.show;
+    if (show.show.image) {
+      const {medium} = show.show.image;
+      image = medium;
+    } else {
+      image = IMG_PLACEHOLDER;
+    }
+    return {summary, id, name, image};
+  });
+  console.log(shows);
   return shows; //this is the array of shows
 }
 
@@ -26,19 +38,17 @@ async function getShowsByTerm(term) {
 
 function populateShows(shows) {
   $showsList.empty();
-
   for (let show of shows) {
-    if (show.show.image) {
       const $show = $(
         `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img
-              src="${show.show.image.medium}"
-              alt="${show.show.name}"
+              src="${show.image}"
+              alt="${show.name}"
               class="w-25 me-3">
            <div class="media-body">
-             <h5 class="text-primary">${show.show.name}</h5>
-             <div><small>${show.show.summary}</small></div>
+             <h5 class="text-primary">${show.name}</h5>
+             <div><small>${show.summary}</small></div>
              <button class="btn btn-outline-light btn-sm Show-getEpisodes">
                Episodes
              </button>
@@ -46,9 +56,7 @@ function populateShows(shows) {
          </div>
        </div>
       `);
-
       $showsList.append($show);
-    }
   }
 }
 
