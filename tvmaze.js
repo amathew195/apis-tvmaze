@@ -3,8 +3,9 @@
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
-const IMG_PLACEHOLDER = "https://tinyurl.com/tv-missing"
-//TO DO Move up base_URL
+const IMG_PLACEHOLDER = "https://tinyurl.com/tv-missing";
+const BASE_URL = "http://api.tvmaze.com/";
+
 
 /** Given a search term, search for tv shows that match that query.
  *
@@ -15,22 +16,21 @@ const IMG_PLACEHOLDER = "https://tinyurl.com/tv-missing"
 
 async function getShowsByTerm(term) {
 
-  const response = await axios.get("http://api.tvmaze.com/search/shows", { params: { q: term } });
-
+  const response = await axios.get(`${BASE_URL}search/shows`, { params: { q: term } });
   let image;
 
-  const shows = response.data.map( show => {
-    const {summary, id, name} = show.show;
+  const shows = response.data.map(show => {
+    const { summary, id, name } = show.show;
     if (show.show.image) {
-      const {medium} = show.show.image;
+      const { medium } = show.show.image;
       image = medium;
     } else {
       image = IMG_PLACEHOLDER;
     }
-    return {summary, id, name, image};
+    return { summary, id, name, image };
   });
-  console.log(shows);
-  return shows; //this is the array of shows
+
+  return shows;
 }
 
 
@@ -39,8 +39,8 @@ async function getShowsByTerm(term) {
 function populateShows(shows) {
   $showsList.empty();
   for (let show of shows) {
-      const $show = $(
-        `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
+    const $show = $(
+      `<div data-show-id="${show.id}" class="Show col-md-12 col-lg-6 mb-4">
          <div class="media">
            <img
               src="${show.image}"
@@ -56,17 +56,18 @@ function populateShows(shows) {
          </div>
        </div>
       `);
-      $showsList.append($show);
+    $showsList.append($show);
   }
 }
 
 
 /** Handle search form submission: get shows from API and display.
- *    Hide episodes area (that only gets shown if they ask for episodes)
+ *  Hide episodes area (that only gets shown if they ask for episodes)
  */
 
 async function searchForShowAndDisplay() {
   const term = $("#searchForm-term").val();
+
   const shows = await getShowsByTerm(term);
 
   $episodesArea.hide();
@@ -83,8 +84,42 @@ $searchForm.on("submit", async function (evt) {
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id) {
+  const response = await axios.get(`${BASE_URL}shows/${id}/episodes`);
 
-/** Write a clear docstring for this function... */
+  const episodes = response.data.map(episode => {
+    const { id, name, season, number } = episode;
+    return { id, name, season, number };
+  });
 
-// function populateEpisodes(episodes) { }
+  return episodes;
+}
+
+/** This function accepts an array of episodes and updates the DOM to
+ * display the episodes for the selected show.
+ */
+
+function populateEpisodes(episodes) {
+  $("#episodesList").empty();
+  $episodesArea.show();
+  for (const episode of episodes) {
+    const $episodeLI = $("<li>").text(
+      `${episode.name} (season ${episode.season}, number ${episode.number})`
+    );
+    $("#episodesList").append($episodeLI);
+  }
+}
+
+/** This function gets invoked upon clicking the 'episodes' button. It invokes
+ * the getEpisodesOfShow and passes in the show ID. It also invokes the
+ * populateEpisodes function and passes in the episodes array returned from
+ * the getEpisodesOfShow function.
+ */
+
+async function getEpisodesAndDisplay(evt) {
+  const id = $(evt.target).closest(".Show").data("show-id");
+  const episodes = await getEpisodesOfShow(id);
+  populateEpisodes(episodes);
+}
+
+$showsList.on('click', ".Show-getEpisodes", getEpisodesAndDisplay);
